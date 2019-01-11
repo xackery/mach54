@@ -36,6 +36,11 @@ Sub HealLoad
 	/varset EmergencyHealTargetPctHPs ${Macro.Return}
 	/call ConfigRead Heal EmergencyHealRange
 	/varset EmergencyHealRange ${Macro.Return}
+
+	/if (${EffectiveHealSpellName.Length}>0) /memorize "${EffectiveHealSpellName}" ${EffectiveHealGem}
+	/delay 6s ${Cast.Ready[M]}
+	/if (${EmergencyHealSpellName.Length}>0) /memorize "${EmergencyHealSpellName}" ${EmergencyHealGem}
+	/delay 6s ${Cast.Ready[M]}
 /return
 
 Sub HealLoop

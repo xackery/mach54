@@ -1,5 +1,4 @@
 | Main Assist logic
-#include mach54/config.inc
 
 Sub MainAssistInit
     /declare MainAssist string outer
@@ -7,12 +6,11 @@ Sub MainAssistInit
 	/declare MainTargetID int outer 0
 /return
 
-Sub MainLoad
-    /call ConfigRead General MainAssist
-    /varset MainAssist ${Macro.Return}    
+Sub MainAssistLoad
+	/varset MainAssist ${Ini[mach54/mach54.ini,General,MainAssist]} 
 /return
 
-Sub MainLoop
+Sub MainAssistLoop
     /if (${Me.Name.NotEqual[${MainAssist}]}) /return
 
     |Disengage Logic

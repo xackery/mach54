@@ -3,7 +3,15 @@
 #turbo 20
 
 Sub Main
-    /call MainInit
-    /call MainLoad
-    /call MainLoop
+	/declare State string outer Idle
+	/declare LastState string outer
+    /call MachInit
+    /call MachLoad
+:Loop
+    /doevents
+	/varset LastState ${State}
+
+    /call MachLoop
+	/delay 1s
+	/goto :Loop
 /return

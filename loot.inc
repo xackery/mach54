@@ -3,17 +3,21 @@
 Sub LootInit
 	/declare IsLooter bool outer FALSE
 	/declare IsCombatLoot bool outer FALSE
+	/declare LootCorpseRadius int outer 50
 	|---Internal Variables---
 	/declare LootRetryTimer timer outer
 	|will be set to true when out of space, and will return to true once emptied
 	/declare OutOfSpace bool outer FALSE
-	/declare MasterCorpseList
+	/declare MasterCorpseList string outer
 	/declare CantLootID int outer 0
 /return
 
 Sub LootLoad
-    /call ConfigRead General MainLooter
-    if (!${Macro.Return.Equal[${Me.Name}]}) /return
+	/declare mainLooter string local 
+    /varset mainLooter ${Ini[mach54/mach54.ini,General,MainLooter]} 
+	/bc ${mainLooter}
+	/if (${mainLooter.NotEqual[${Me.Name}]}) /return
+	/varset LootCorpseRadius ${Ini[mach54/mach54.ini,General,LootCorpseRadius]} 
 
     /varset IsLooter TRUE
     /bc I will loot items
@@ -33,20 +37,19 @@ Sub Event_LootFailLore
 
 /return
 Sub LootLoop
-	/declare corpseTotalItems int local 0
+	/if (!${IsLooter}) /return
+	
 	/declare selectedItem string local
 	/declare itemAction string local
 	/declare i int local
 	/declare lootList string local
 	/if (!${Cast.Ready}) /return
-
+	
 	/if (!${State.Equal[Idle]}) {
 		/if (!${State.Equal[Combat]}) /return
 		/if (!${IsCombatLoot}) /return
-
 		/return
 	}
-	/if (!${IsLooter}) /return
 	/if (${LootRetryTimer}>0) /return
 	/call CheckCursor
 	/if (!${Me.FreeInventory}) {
@@ -55,30 +58,31 @@ Sub LootLoop
 		/varset OutOfSpace TRUE
 		/return
 	}
+	
 	/if (${OutOfSpace}) /varset OutOfSpace FALSE
-
 	/call LootMob
+	/varset LootRetryTimer 2s
 /return
 
 Sub LootMob
-	/declare deadCount int local ${SpawnCount[corpse radius ${CorpseRadius} zradius 50]}
+	/declare deadCount int local ${SpawnCount[corpse radius ${LootCorpseRadius} zradius 50]}
 	/declare corpseList string local
 	/declare i int local
 	/declare closestCorpseID int local
-	/declare corpseList string local
-	/declare corpseCount int local 0
 	/declare corpseToLootID int local
+	/declare corpseCount int local 0
+
 
 	/if (${deadCount}==0) /return
 	/for i 1 to ${deadCount}
-		/varset closestCorpseID ${NearestSpawn[${i},corpse radius ${CorpseRadius} zradius 50].ID}
+		/varset closestCorpseID ${NearestSpawn[${i},corpse radius ${LootCorpseRadius} zradius 50].ID}
 		/if (${Spawn[${closestCorpseID}].Deity.ID}) /next i
 		/varset corpseList ${corpseList}${closestCorpseID}|
         /if (!${MasterCorpseList.Find[${closestCorpseID}]}) /varset MasterCorpseList ${MasterCorpseList}${closestCorpseID}|
         /varcalc corpseCount ${corpseCount}+1
 	/next i
 
-	/for i 1 to ${corpseCount}
+	/for i 1 to ${deadCount}
 		/varset corpseToLootID ${corpseList.Arg[${i},|]}
 		/if (!${Defined[corpseLocked${corpseToLootID}]}) /declare corpseLocked${corpseToLootID} timer outer 0
 		/if (${Spawn[${corpseToLootID}].Deity.ID}) /next i
@@ -97,14 +101,13 @@ Sub LootMob
 				/keypress back
 			}
 			/delay 3s ${MoveTo.Stopped} && !${Me.Moving}
-			/call ZCheck ${ZDist} 8
 			/if (${Target.ID}) /face fast
 		}
 		/if (${Target.Distance} < 12) {
 			/call LootCorpse
 			/if (!${Defined[corpseLocked${corpseToLootID}]}) /next i
 			/if (${corpseLocked${corpseToLootID}}) /next i
-			/if (!${MasterCorpseList.Find[${corpseToLootID}]) /next i
+			/if (!${MasterCorpseList.Find[${corpseToLootID}]}) /next i
 			/deletevar corpseLocked${corpseToLootID}
 			/varset MasterCorpseList ${MasterCorpseList,Replace[${corpseToLootID}|,]}
 		}
@@ -112,6 +115,11 @@ Sub LootMob
 /return
 
 Sub LootCorpse
+	/declare corpseTotalItems int local
+	/declare i int local
+	/declare selectedItem string local
+	/declare itemAction string local
+
 	/varset CantLootID 0
 	/loot
 	/delay 3s ${Corpse.Open}
@@ -122,38 +130,43 @@ Sub LootCorpse
 		/varset LootRetryTimer 6s
 		/return
 	}
+	/if (${Corpse.Items} == 0) /goto :LootFinish
 :LootLag
 	/varset corpseTotalItems ${Corpse.Items}
+	/echo ${corpseTotalItems}
 	/if (${corpseTotalItems} != ${Corpse.Items}) /goto :LootLag
 	/for i 1 to ${corpseTotalItems}
 		/if (!${Corpse.Item[${i}].ID}) /next i
 
-		/varset itemAction ${Ini["loot.ini","${Corpse.Item[${i}].Name.Left[1]}","${selectedItem}"]}
+		/varset itemAction ${Ini["mach54/mach54.ini","Loot","${selectedItem}"]}
 		/if (${itemAction.Length}==0) /next i
 
 		/varset selectedItem ${If[${Corpse.Item[${i}].Name.Find[,]},${Corpse.Item[${i}].Name.Arg[1,,]}${Corpse.Item[${i}].Name.Arg[2,,]},${Corpse.Item[${i}].Name}]}
 
+		/echo ${selectedItem} ${itemAction}
 		|Destroy
 		/if (${itemAction.Equal[Destroy]}) {
+
     		|/if (!${QuestOnly}) /call LootItem ${i} Destroy left
-			/bc TODO: Destroy ${selectedItem}
+			/bc ${selectedItem} Destroy ${Corpse.Item[${i}].BuyPrice}
     		/next i
   		}
 
 		|Keep
 		/if (${itemAction.Equal[Keep]}) {
+			/bc ${selectedItem} Keep ${Corpse.Item[${i}].BuyPrice}
 			/call LootItem ${i} Keep right
 			/next i
 		}
 
 		|Announce
 		/if (${itemAction.Equal[Announce]}) {
-			/bc ${selectedItem} dropped from corpse id ${Corpse.ID}
+			/bc ${selectedItem} dropped from corpse id ${Corpse.ID} ${Corpse.Item[${i}].BuyPrice}
 			/next i
 		}
+		/bc ${selectedItem} Keep (default) ${Corpse.Item[${i}].BuyPrice}
+		/call LootItem ${i} Keep right
 	/next i
-/return
-
 :LootFinish
 	/nomodkey /notify LootWnd LW_DoneButton leftmouseup
 	/delay 5s !${Corpse.Open}

@@ -6,8 +6,7 @@ Sub MainPullerInit
 /return
 
 Sub MainPullerLoad
-    /call ConfigRead General MainPuller
-    /varset MainPuller ${Macro.Return}
+    /varset MainPuller ${Ini[mach54/mach54.ini,General,MainPuller]} 
 /return
 
 Sub MainPullerLoop

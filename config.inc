@@ -6,18 +6,17 @@ Sub ConfigInit
 Sub ConfigLoad
 /return
 
-Sub ConfigLoop    
+Sub ConfigLoop
 /return
 
 Sub ConfigRead(string category, string key)
 	/declare value string local
-
-	/varset value ${Ini[${Me.Name},${category},${key}]}
+	/varset value ${Ini[mach54/${Me.Name}.ini,${category},${key}]}
 	/if (${value.NotEqual[]}) /return ${value}
 
-	/varset value ${Ini[${Me.Class.ShortName},${category},${key}]}
+	/varset value ${Ini[${mach54/Me.Class.ShortName}.ini,${category},${key}]}
 	/if (${value.NotEqual[]}) /return ${value}
 
-	/varset value ${Ini[default.ini,${category},${key}]}
+	/varset value ${Ini[mach54/default.ini,${category},${key}]}
 	/if (${value.NotEqual[]}) /return ${value}
 /return ${value}
