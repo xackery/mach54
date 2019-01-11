@@ -1,0 +1,9 @@
+#include mach54/mach54.inc
+
+#turbo 20
+
+Sub Main
+    /call MainInit
+    /call MainLoad
+    /call MainLoop
+/return
